@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import re
+import datetime
+from gradelib import *
+
+r = Runner(save("rtc.out"))
+
+@test(1, "RTC date test")
+def test_rtc():
+    # 获取本机当前时间
+    host_now = datetime.datetime.now()
+    host_year = host_now.year
+    host_month = host_now.month
+    host_day = host_now.day
+    host_hour = host_now.hour
+    
+    # 月份名称映射
+    month_names = {
+        1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun',
+        7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'
+    }
+    
+    # 星期几名称映射
+    weekday_names = {
+        0: 'Mon', 1: 'Tue', 2: 'Wed', 3: 'Thu', 4: 'Fri', 5: 'Sat', 6: 'Sun'
+    }
+    
+    # 运行date命令获取系统时间
+    r.run_qemu(shell_script([
+        'busybox date', 'exit'
+    ]))
+    
+    date_output = re.search(r'busybox date\r?\n(.*)', r.qemu.output)
+    if date_output:
+        print(f"\nQEMU date output: {date_output.group(1).strip()}")
+    
+    hours = []
+    for h in range(24):
+        if h == host_hour or (h - host_hour) % 24 == 8 or (host_hour - h) % 24 == 8:
+            hours.append(f"{h:02d}")
+    
+    month_name = month_names[host_month]
+    combined_pattern = fr'\w+ {month_name} {host_day} ({"|".join(hours)}):\d+:\d+ \w+ {host_year}'
+    
+    # 使用综合正则表达式进行匹配
+    r.match(combined_pattern)
+    
+    # 格式化host_time，使其输出格式与busybox date一致
+    weekday = weekday_names[host_now.weekday()]
+    month = month_names[host_month]
+    formatted_host_time = f"{weekday} {month} {host_day:2d} {host_hour:02d}:{host_now.minute:02d}:{host_now.second:02d} UTC {host_year}"
+    print(f"Host time: {formatted_host_time}")
+    print("RTC test completed. See rtc.out for details.")
+
+run_tests()

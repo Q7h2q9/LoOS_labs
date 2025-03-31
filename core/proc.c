@@ -106,10 +106,12 @@ found:
 
 void proc_free(struct task_struct *proc) {
     pgtbl_free(proc);
+    /*
     free(proc->mapping_list);
     free(proc->context);
     free(proc->trapframe); 
     free(proc->fdtable);
+    */
     list_del(&proc->children);
     list_del(&proc->tasks);
     proc->allocs = UNUSED;

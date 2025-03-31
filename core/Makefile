@@ -9,3 +9,4 @@ obj-y += trap.o
 obj-y += trap_entry.o
 obj-y += user.o
 obj-y += time.o
+obj-y += rtc.o

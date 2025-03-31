@@ -7,12 +7,14 @@
 #include "asm/mmu.h"
 #include "kstruct/list.h"
 #include "time.h"
+#include "rtc.h"
 
 uint64_t cur_sp;
 
 struct trapframe *get_trapframe() {
     return (void*)cur_sp;
 }
+
 
 static uint64_t argraw(int n) {
     struct trapframe *trapframe = get_trapframe();
@@ -217,8 +219,15 @@ uint64_t sys_getrandom() {
     return bufsize;
 }
 
-// #include "struct/time.h"
 uint64_t tick = 0;
+
+uint64_t sys_clock_gettime(void) {
+    return 0;
+}
+
+uint64_t sys_gettimeofday() {
+    return 0;
+}
 
 void do_signal(uint64_t signum) {
     struct task_struct *p = my_proc();
@@ -435,6 +444,8 @@ uint64_t sys_return_random() {
     return rand();
 }
 
+
+
 static uint64_t (*syscalls[])(void) = {
     [SYS_openat]    sys_openat,
     [SYS_close]     sys_close,
@@ -462,7 +473,7 @@ static uint64_t (*syscalls[])(void) = {
     [SYS_rt_sigprocmask]    sys_return_zero,
     [SYS_gettid]            sys_get_proc_id,
     [SYS_getpid]            sys_get_proc_id,
-    [SYS_getppid]           sys_get_proc_id,
+    [SYS_getppid]           sys_return_zero,
 
     [SYS_geteuid]           sys_return_zero,
     [SYS_getuid]            sys_return_zero,
@@ -492,12 +503,12 @@ static uint64_t (*syscalls[])(void) = {
     [SYS_reboot]            sys_return_zero,
     [SYS_nanosleep]         sys_return_zero,
     [SYS_munmap]            sys_return_zero,
-    [SYS_clock_gettime]     sys_return_zero,
-    [SYS_gettimeofday]      sys_return_zero,
+    [SYS_clock_gettime]     sys_clock_gettime,
+    [SYS_gettimeofday]      sys_gettimeofday,
     [SYS_faccessat]         sys_return_wrong,
     [SYS_pipe2]             sys_pipe2,
     [SYS_sendfile]          sys_sendfile,
-
+    
 };
 
 
