@@ -222,10 +222,38 @@ uint64_t sys_getrandom() {
 uint64_t tick = 0;
 
 uint64_t sys_clock_gettime(void) {
+    struct timespec *ts = (struct timespec *)argraw(0);
+    if (!ts) {
+        printf("sys_clock_gettime: invalid timespec pointer\n"); // 使用kprintf替代printk
+        return -1;
+    }
+
+    struct rtc_time tm;
+    if (rtc_read_time(&tm) < 0) {
+        printf("sys_clock_gettime: failed to read RTC\n");
+        return -1;
+    }
+
+    ts->tv_sec = rtc_tm_to_sec(&tm);
+    ts->tv_nsec = 0;  // RTC通常不提供纳秒精度
     return 0;
 }
 
-uint64_t sys_gettimeofday() {
+uint64_t sys_gettimeofday(void) {
+    struct timeval *tv = (struct timeval *)argraw(0);
+    if (!tv) {
+        printf("sys_gettimeofday: invalid timeval pointer\n");
+        return -1;
+    }
+
+    // 直接调用rtc函数避免未初始化问题
+    struct rtc_time tm;
+    if (rtc_read_time(&tm) < 0) {
+        return -1;
+    }
+
+    tv->tv_sec = rtc_tm_to_sec(&tm);
+    tv->tv_usec = 0;  // 微秒设为0
     return 0;
 }
 
@@ -322,7 +350,6 @@ uint64_t sys_chdir() {
     printf("chdir %s\n", p->cwd);
     return 0;
 }
-
 uint64_t sys_get_proc_id() {
     return get_proc_id();
 }
@@ -444,7 +471,13 @@ uint64_t sys_return_random() {
     return rand();
 }
 
-
+uint64_t sys_getppid(void) {
+    struct task_struct *p = my_proc();
+    if (p->parent) {
+        return p->parent->pid;
+    }
+    return 0;  // 如果没有父进程（如 init 进程），返回 0
+}
 
 static uint64_t (*syscalls[])(void) = {
     [SYS_openat]    sys_openat,
@@ -473,7 +506,7 @@ static uint64_t (*syscalls[])(void) = {
     [SYS_rt_sigprocmask]    sys_return_zero,
     [SYS_gettid]            sys_get_proc_id,
     [SYS_getpid]            sys_get_proc_id,
-    [SYS_getppid]           sys_return_zero,
+    [SYS_getppid]           sys_getppid,
 
     [SYS_geteuid]           sys_return_zero,
     [SYS_getuid]            sys_return_zero,
